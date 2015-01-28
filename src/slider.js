@@ -40,7 +40,6 @@ angular.module('ui.slider', []).value('uiSliderConfig',{}).directive('uiSlider',
                             options[property] = parseNumber(attrs[property], useDecimals);
                         }
                     });
-
                     elm.slider(options);
                     init = angular.noop;
                 };
@@ -66,7 +65,10 @@ angular.module('ui.slider', []).value('uiSliderConfig',{}).directive('uiSlider',
                 scope.$watch(attrs.uiSlider, function(newVal) {
                     init();
                     if(newVal !== undefined) {
-                      elm.slider('option', newVal);
+                        elm.slider('option', newVal);
+                        if (angular.isDefined(newVal['max']) && angular.isDefined(newVal['tick']) && angular.isDefined(newVal['step'])) {
+                            tickMarksRender(newVal['max'], newVal['step'], elm);
+                        }
                     }
                 }, true);
 
@@ -146,13 +148,17 @@ angular.module('ui.slider', []).value('uiSliderConfig',{}).directive('uiSlider',
                         options[property] = attrs[property];
                     }
                 });
-                if (angular.isDefined(options['tick']) && angular.isDefined(options['step'])) {
-                    var total = parseInt(parseInt(options['max'])/parseInt(options['step']));
-                    for (var i = total; i >= 0; i--) {
-                        var left = ((i / total) * 100) + '%';
-                        $("<div/>").addClass("ui-slider-tick").appendTo(element).css({left: left});
-                    };
+                if (angular.isDefined(options['max']) && angular.isDefined(options['tick']) && angular.isDefined(options['step'])) {
+                    tickMarksRender(options['max'], options['step'], element);
                 }
+            }
+
+            var tickMarksRender = function(max, step, element) {
+                var total = parseInt(parseInt(max)/parseInt(step));
+                for (var i = total; i >= 0; i--) {
+                    var left = ((i / total) * 100) + '%';
+                    $("<div/>").addClass("ui-slider-tick").appendTo(element).css({left: left});
+                };
             }
 
             return {
