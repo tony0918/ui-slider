@@ -5,12 +5,12 @@ angular.module('ui.slider', []).value('uiSliderConfig',{}).directive('uiSlider',
     uiSliderConfig = uiSliderConfig || {};
     return {
         require: 'ngModel',
-        compile: function () {
-            return function (scope, elm, attrs, ngModel) {
+        compile: function() {
+            var preLink = function (scope, elm, attrs, ngModel) {
 
                 function parseNumber(n, decimals) {
-                    return (decimals) ? parseFloat(n) : parseInt(n);
-                };
+                    return (decimals) ? parseFloat(n) : parseInt(n, 10);
+                }
 
                 var options = angular.extend(scope.$eval(attrs.uiSlider) || {}, uiSliderConfig);
                 // Object holding range values
@@ -51,6 +51,7 @@ angular.module('ui.slider', []).value('uiSliderConfig',{}).directive('uiSlider',
                     attrs.$observe(property, function(newVal) {
                         if (!!newVal) {
                             init();
+                            options[property] = parseNumber(newVal, useDecimals);
                             elm.slider('option', property, parseNumber(newVal, useDecimals));
                             ngModel.$render();
                         }
@@ -64,7 +65,7 @@ angular.module('ui.slider', []).value('uiSliderConfig',{}).directive('uiSlider',
                 // Watch ui-slider (byVal) for changes and update
                 scope.$watch(attrs.uiSlider, function(newVal) {
                     init();
-                    if(newVal != undefined) {
+                    if(newVal !== undefined) {
                       elm.slider('option', newVal);
                     }
                 }, true);
@@ -104,11 +105,13 @@ angular.module('ui.slider', []).value('uiSliderConfig',{}).directive('uiSlider',
                         // Check min and max range values
                         if (ngModel.$viewValue[0] > ngModel.$viewValue[1]) {
                             // Min value should be less to equal to max value
-                            if (prevRangeValues.min >= ngModel.$viewValue[1])
+                            if (prevRangeValues.min >= ngModel.$viewValue[1]) {
                                 ngModel.$viewValue[0] = prevRangeValues.min;
+                            }
                             // Max value should be less to equal to min value
-                            if (prevRangeValues.max <= ngModel.$viewValue[0])
+                            if (prevRangeValues.max <= ngModel.$viewValue[0]) {
                                 ngModel.$viewValue[1] = prevRangeValues.max;
+                            }
                         }
 
                         // Store values for later user
@@ -128,7 +131,33 @@ angular.module('ui.slider', []).value('uiSliderConfig',{}).directive('uiSlider',
                 function destroy() {
                     elm.slider('destroy');
                 }
-                elm.bind('$destroy', destroy);
+                scope.$on("$destroy", function() {
+                    destroy();
+                });
+            };
+
+            var postLink = function (scope, element, attrs, ngModel) {
+                // Add tick marks if 'tick' and 'step' attributes have been setted on element.
+                // Support horizontal slider bar so far. 'tick' and 'step' attributes are required.
+                var options = angular.extend({}, scope.$eval(attrs.uiSlider));
+                var properties = ['max', 'step', 'tick'];
+                angular.forEach(properties, function(property) {
+                    if (angular.isDefined(attrs[property])) {
+                        options[property] = attrs[property];
+                    }
+                });
+                if (angular.isDefined(options['tick']) && angular.isDefined(options['step'])) {
+                    var total = parseInt(parseInt(options['max'])/parseInt(options['step']));
+                    for (var i = total; i >= 0; i--) {
+                        var left = ((i / total) * 100) + '%';
+                        $("<div/>").addClass("ui-slider-tick").appendTo(element).css({left: left});
+                    };
+                }
+            }
+
+            return {
+                pre: preLink,
+                post: postLink
             };
         }
     };
